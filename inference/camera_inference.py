@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
 import torch
+import sys
+sys.path.append('..')
 from model.physnet_model import PhysNet
 import matplotlib.pyplot as plt
 from face_detection.face_detection import face_detection
