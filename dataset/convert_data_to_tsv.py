@@ -47,4 +47,4 @@ def convert_data_to_tsv(device):
                 else:
                     rppg = rppg[:1500]
 
-                rp.write(rppg + "\t" + "0")
+                rp.write(rppg + "\t" + "1")
