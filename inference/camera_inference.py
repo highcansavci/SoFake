@@ -5,6 +5,7 @@ import sys
 
 sys.path.append('..')
 from model.physnet_model import PhysNet
+from model.rppg_model import RPPGModel
 import matplotlib.pyplot as plt
 from face_detection.face_detection import face_detection
 import time
@@ -14,6 +15,7 @@ from utils.utils_sig import butter_bandpass, hr_fft
 device = torch.device('cpu')
 model = PhysNet(S=2).to(device).eval()
 model.load_state_dict(torch.load('./model_weights.pt', map_location=device))
+rppg_model = RPPGModel(300, 100, 10, device)
 
 def live_demo():
     cap = cv2.VideoCapture(0)
@@ -43,7 +45,13 @@ def live_demo():
                 rppg = model(face_list)[:, -1, :]
                 rppg = rppg[0].detach().cpu().numpy()
                 rppg = butter_bandpass(rppg, lowcut=0.6, highcut=4, fs=fps)
-
+                if rppg.shape[0] < 1500:
+                    rppg = np.pad(rppg, (0, 1500 - rppg.shape[0]), constant_values=0)
+                else:
+                    rppg = rppg[:1500]
+                rppg_tensor = torch.from_numpy(rppg.copy()).float()
+                classified = rppg_model(rppg_tensor.reshape((1, -1))) > 0
+                print(f"Classified: {classified.item()}")
             hr, psd_y, psd_x = hr_fft(rppg, fs=fps)
 
             fig, (ax1, ax2) = plt.subplots(2, figsize=(20, 10))
