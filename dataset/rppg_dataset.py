@@ -23,7 +23,7 @@ def create_dataloader():
     return train_loader, test_loader
 
 class RPPGDataset(Dataset):
-    def _init__(self, data_path):
+    def __init__(self, data_path):
         self.data = pandas.read_csv(data_path, sep="\t")
 
     def __len__(self):
