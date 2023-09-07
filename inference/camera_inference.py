@@ -9,10 +9,12 @@ from model.rppg_model import RPPGModel
 import matplotlib.pyplot as plt
 from face_detection.face_detection import face_detection
 import time
-
+from config.config import Config
 from utils.utils_sig import butter_bandpass, hr_fft
 
-device = torch.device('cpu')
+config_ = Config().config
+
+device = torch.device(config_["device"])
 model = PhysNet(S=2).to(device).eval()
 model.load_state_dict(torch.load('./model_weights.pt', map_location=device))
 rppg_model = RPPGModel(300, 100, 10, device)

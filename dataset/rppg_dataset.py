@@ -1,10 +1,12 @@
 import torch
 import pandas
 from torch.utils.data import Dataset, DataLoader
+from config.config import Config
 
+config_ = Config().config
 
 def create_dataloader():
-    batch_size = 128
+    batch_size = config_["model"]["batch_size"]
     dataset = RPPGDataset("rppg_data.tsv")
     train_dataset, test_dataset = torch.utils.data.random_split(dataset, [0.8, 0.2])
 
@@ -30,5 +32,5 @@ class RPPGDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
-        return torch.tensor(self.data.iloc[idx, 0], device=torch.device("cpu"), dtype=torch.float), torch.tensor(
-            self.data.iloc[idx, 1], device=torch.device("cpu"), dtype=torch.float)
+        return torch.tensor(self.data.iloc[idx, 0], device=config_["device"], dtype=torch.float), torch.tensor(
+            self.data.iloc[idx, 1], device=config_["device"], dtype=torch.float)

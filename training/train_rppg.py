@@ -11,11 +11,14 @@ from model.rppg_model import RPPGModel
 from datetime import datetime
 import matplotlib.pyplot as plt
 from pathlib import Path
+from config.config import Config
+
+config_ = Config().config
 
 if __name__ == "__main__":
-    NUM_EPOCH = 1000
-    LEARNING_RATE = 1e-4
-    DEVICE = torch.device("cpu")
+    NUM_EPOCH = config_["model"]["num_epochs"]
+    LEARNING_RATE = config_["model"]["learning_rate"]
+    DEVICE = torch.device(config_["device"])
     convert_data_to_tsv(DEVICE)
     train_loader, test_loader = create_dataloader()
     rppg_model = RPPGModel(300, 100, 10, DEVICE)

@@ -2,10 +2,12 @@ import cv2
 import numpy as np
 from facenet_pytorch import MTCNN
 import torch
+from config.config import Config
 
+config_ = Config().config
 
 def face_detection(video_path):
-    device = torch.device('cpu')
+    device = torch.device(config_["device"])
     mtcnn = MTCNN(device=device)
 
     cap = cv2.VideoCapture(video_path)
