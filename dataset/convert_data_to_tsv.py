@@ -18,7 +18,10 @@ def convert_data_to_tsv(device):
     with open("rppg_data.tsv", "w", encoding="utf-8") as rp:
         rp.write("rpgg_data" + "\t" + "class")
         for spoof_video in spoof_videos:
-            face_list, fps = face_detection(video_path=spoof_video)
+            try:
+                face_list, fps = face_detection(video_path=spoof_video)
+            except TypeError:
+                continue
             print('\nrPPG estimation')
 
             with torch.no_grad():
@@ -34,7 +37,10 @@ def convert_data_to_tsv(device):
                 rp.write(rppg + "\t" + "0")
 
         for no_spoof_video in no_spoof_videos:
-            face_list, fps = face_detection(video_path=no_spoof_video)
+            try:
+                face_list, fps = face_detection(video_path=spoof_video)
+            except TypeError:
+                continue
             print('\nrPPG estimation')
 
             with torch.no_grad():
