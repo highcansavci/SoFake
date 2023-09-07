@@ -16,8 +16,8 @@ from config.config import Config
 config_ = Config().config
 
 if __name__ == "__main__":
-    NUM_EPOCH = config_["model"]["num_epochs"]
-    LEARNING_RATE = config_["model"]["learning_rate"]
+    NUM_EPOCH = int(config_["model"]["num_epochs"])
+    LEARNING_RATE = float(config_["model"]["learning_rate"])
     DEVICE = torch.device(config_["device"])
     convert_data_to_tsv(DEVICE)
     train_loader, test_loader = create_dataloader()
