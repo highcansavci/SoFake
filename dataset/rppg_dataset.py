@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 import pandas
 from torch.utils.data import Dataset, DataLoader
@@ -6,7 +7,7 @@ from config.config import Config
 config_ = Config().config
 
 def create_dataloader():
-    batch_size = config_["model"]["batch_size"]
+    batch_size = int(config_["model"]["batch_size"])
     dataset = RPPGDataset("rppg_data.tsv")
     train_dataset, test_dataset = torch.utils.data.random_split(dataset, [0.8, 0.2])
 
@@ -32,5 +33,5 @@ class RPPGDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
-        return torch.tensor(self.data.iloc[idx, 0], device=config_["device"], dtype=torch.float), torch.tensor(
-            self.data.iloc[idx, 1], device=config_["device"], dtype=torch.float)
+        return torch.tensor(np.array(self.data.iloc[idx, 0]), device=config_["device"], dtype=torch.float), torch.tensor(
+            self.data.iloc[idx, 1].astype(np.int32), device=config_["device"], dtype=torch.int32)

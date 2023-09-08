@@ -8,15 +8,15 @@ from utils.utils_sig import butter_bandpass
 
 def convert_data_to_tsv(device):
     model = PhysNet(S=2).to(device).eval()
-    model.load_state_dict(torch.load('./model_weights.pt', map_location=device))
-    spoof_video_path = r"dataset/data/spoof/*.mp4"
-    no_spoof_video_path = r"dataset/data/no-spoof/*.mp4"
+    model.load_state_dict(torch.load('../inference/model_weights.pt', map_location=device))
+    spoof_video_path = r"../dataset/data/spoof/*.mp4"
+    no_spoof_video_path = r"../dataset/data/no-spoof/*.MOV"
 
     spoof_videos = glob.glob(spoof_video_path)
     no_spoof_videos = glob.glob(no_spoof_video_path)
 
     with open("rppg_data.tsv", "w", encoding="utf-8") as rp:
-        rp.write("rpgg_data" + "\t" + "class")
+        rp.write("rpgg_data" + "\t" + "class\n")
         for spoof_video in spoof_videos:
             try:
                 face_list, fps = face_detection(video_path=spoof_video)
@@ -34,11 +34,11 @@ def convert_data_to_tsv(device):
                 else:
                     rppg = rppg[:1500]
 
-                rp.write(rppg + "\t" + "0")
+                rp.write(str(rppg) + "\t" + "0\n")
 
         for no_spoof_video in no_spoof_videos:
             try:
-                face_list, fps = face_detection(video_path=spoof_video)
+                face_list, fps = face_detection(video_path=no_spoof_video)
             except TypeError:
                 continue
             print('\nrPPG estimation')
@@ -53,4 +53,5 @@ def convert_data_to_tsv(device):
                 else:
                     rppg = rppg[:1500]
 
-                rp.write(rppg + "\t" + "1")
+                rp.write(str(rppg) + "\t" + "1\n")
+

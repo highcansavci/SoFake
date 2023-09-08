@@ -7,7 +7,7 @@ from config.config import Config
 config_ = Config().config
 
 def face_detection(video_path):
-    device = torch.device(config_["device"])
+    device = torch.device("cpu")
     mtcnn = MTCNN(device=device)
 
     cap = cv2.VideoCapture(video_path)
@@ -32,6 +32,8 @@ def face_detection(video_path):
         box_mid_x = np.round((boxes[0, 2] + boxes[0, 0]) / 2).astype('int')
         cropped_face = frame[box_mid_y - box_half_len:box_mid_y + box_half_len,
                        box_mid_x - box_half_len:box_mid_x + box_half_len]
+        if cropped_face is None or np.prod(cropped_face.shape) == 0:
+            continue
         cropped_face = cv2.resize(cropped_face, (128, 128))
         face_list.append(cropped_face)
 
