@@ -19,9 +19,10 @@ if __name__ == "__main__":
     NUM_EPOCH = int(config_["model"]["num_epochs"])
     LEARNING_RATE = float(config_["model"]["learning_rate"])
     DEVICE = torch.device(config_["device"])
+    # Bunu bir kere çalıştırın. rppg_data.tsv varsa elinizde doluysa çalıştırmanıza gerek yok.
     convert_data_to_tsv(DEVICE)
     train_loader, test_loader = create_dataloader()
-    rppg_model = RPPGModel(300, 100, 10, DEVICE)
+    rppg_model = RPPGModel(100, 50, 10, DEVICE)
     criterion = nn.BCEWithLogitsLoss()
     optimizer = torch.optim.Adam(rppg_model.parameters(), lr=LEARNING_RATE)
 

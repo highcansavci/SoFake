@@ -5,7 +5,7 @@ import os
 
 
 if __name__ == "__main__":
-    spoof_video_path = r"../dataset/data/spoof/*.mp4"
+    spoof_video_path = r"data/spoof/*.mp4"
 
     spoof_videos = glob.glob(spoof_video_path)
     for full_video in spoof_videos:
