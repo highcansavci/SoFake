@@ -13,11 +13,11 @@ from config.config import Config
 from utils.utils_sig import butter_bandpass, hr_fft
 
 config_ = Config().config
-
+batch_size = int(config_["model"]["batch_size"])
 device = torch.device(config_["device"])
 model = PhysNet(S=2).to(device).eval()
 model.load_state_dict(torch.load('./model_weights.pt', map_location=device))
-rppg_model = RPPGModel(300, 100, 10, device)
+rppg_model = RPPGModel(1, 500, 10, n_layers=1, device=device)
 
 def live_demo():
     cap = cv2.VideoCapture(0)
@@ -47,12 +47,12 @@ def live_demo():
                 rppg = model(face_list)[:, -1, :]
                 rppg = rppg[0].detach().cpu().numpy()
                 rppg = butter_bandpass(rppg, lowcut=0.6, highcut=4, fs=fps)
-                if rppg.shape[0] < 1500:
-                    rppg = np.pad(rppg, (0, 1500 - rppg.shape[0]), constant_values=0)
+                if rppg.shape[0] < 500:
+                    rppg = np.pad(rppg, (0, 500 - rppg.shape[0]), constant_values=0)
                 else:
-                    rppg = rppg[:1500]
-                rppg_tensor = torch.from_numpy(rppg.copy()).float()
-                classified = rppg_model(rppg_tensor.reshape((1, -1))) > 0
+                    rppg = rppg[:500]
+                rppg_tensor = torch.from_numpy(rppg.copy()[..., np.newaxis]).float().to(device)
+                classified = rppg_model(rppg_tensor.unsqueeze(0)) > 0
                 print(f"Classified: {classified.item()}")
             hr, psd_y, psd_x = hr_fft(rppg, fs=fps)
 

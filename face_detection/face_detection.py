@@ -37,8 +37,6 @@ def face_detection(video_path):
         cropped_face = cv2.resize(cropped_face, (128, 128))
         face_list.append(cropped_face)
 
-        print('face detection %2d' % (100 * (t + 1) / len(video_list)), '%', end='\r', flush=True)
-
     face_list = np.array(face_list)  # (T, H, W, C)
     print(face_list.shape)
     face_list = np.transpose(face_list, (3, 0, 1, 2))  # (C, T, H, W)
