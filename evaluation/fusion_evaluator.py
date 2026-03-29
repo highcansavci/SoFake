@@ -30,12 +30,23 @@ class FusionEvaluator:
         Output : (1, N, T)            ST-rPPG block  (N = S*S+1 = 5 for S=2)
 
     Stage 2 – Signal analysis:
-        rppg_score  = cardiac-band power ratio from the current 30-frame window
+        rppg_score  = cardiac-band power ratio from the current 30-frame window,
                       in [0, 1].  High -> strong cardiac signal (likely real).
         fft_score   = FFT peak-HR confidence computed from a rolling ~10-second
-                      accumulator of PhysNet rPPG output, in [0, 1].
+                      accumulator of normalised PhysNet rPPG chunks, in [0, 1].
                       Normalised so that 40 bpm -> 0.0 and 200 bpm -> 1.0.
-                      Reported as 0.0 until enough signal has accumulated.
+                      Reported as 0.0 until _FFT_MIN_LEN samples are available.
+
+    Inter-window DC-drift note
+    --------------------------
+    PhysNet normalises every 30-frame clip independently, so consecutive
+    15-sample output chunks have incompatible DC offsets.  Concatenating them
+    raw creates step discontinuities that appear as high-frequency noise in the
+    FFT and prevent hr_fft from finding a cardiac peak.
+
+    Fix: each chunk is z-normalised (zero-mean / unit-std) before being appended
+    to the accumulator.  The accumulator is also linearly detrended in
+    _fft_score() to remove any residual slow drift before the FFT.
     """
 
     _CLIP_LEN      = 30    # frames per PhysNet inference window
@@ -73,6 +84,12 @@ class FusionEvaluator:
         arr = arr.transpose(3, 0, 1, 2)      # (3, T, H, W)
         return torch.from_numpy(arr).unsqueeze(0).to(self.device)  # (1, 3, T, H, W)
 
+    @staticmethod
+    def _znorm(x: np.ndarray) -> np.ndarray:
+        """Zero-mean / unit-std normalisation; safe against flat signals."""
+        std = x.std()
+        return (x - x.mean()) / (std if std > 1e-8 else 1.0)
+
     def _rppg_score(self, signal: np.ndarray, fps: float) -> float:
         """Cardiac-band power ratio for the current window, in [0, 1]."""
         try:
@@ -88,11 +105,18 @@ class FusionEvaluator:
         """
         FFT peak-HR confidence from the accumulated rPPG signal.
         Returns (score in [0,1], hr_bpm).  Needs >= _FFT_MIN_LEN samples.
+
+        Linear detrend removes slow inter-chunk drift before FFT so that
+        hr_fft can reliably locate the cardiac spectral peak.
         """
         if len(accum_signal) < self._FFT_MIN_LEN:
             return 0.0, 0.0
         try:
-            filtered     = butter_bandpass(accum_signal, lowcut=0.6, highcut=4.0, fs=fps)
+            # Remove slow drift (residual inter-chunk DC offsets)
+            detrended    = accum_signal - np.linspace(
+                accum_signal[0], accum_signal[-1], len(accum_signal)
+            )
+            filtered     = butter_bandpass(detrended, lowcut=0.6, highcut=4.0, fs=fps)
             hr_bpm, _, _ = hr_fft(filtered, fs=fps)
             score = float(np.clip((hr_bpm - 40.0) / 160.0, 0.0, 1.0))
             return score, hr_bpm
@@ -108,12 +132,13 @@ class FusionEvaluator:
         if not cap.isOpened():
             raise RuntimeError(f"Cannot open video: {self.video_path}")
 
-        fps          = cap.get(cv2.CAP_PROP_FPS) or 30.0
-        frame_buf    = deque(maxlen=self._CLIP_LEN)
-        # Rolling accumulator of non-overlapping rPPG samples for FFT
-        rppg_accum   = deque(maxlen=self._FFT_ACCUM_LEN)
-        results      = []
-        frame_cnt    = 0
+        fps       = cap.get(cv2.CAP_PROP_FPS) or 30.0
+        frame_buf = deque(maxlen=self._CLIP_LEN)
+        # Each appended entry is a z-normalised 15-sample chunk so the
+        # concatenated accumulator is free of inter-window DC steps.
+        rppg_accum = deque(maxlen=self._FFT_ACCUM_LEN)
+        results    = []
+        frame_cnt  = 0
 
         while True:
             ret, frame = cap.read()
@@ -132,9 +157,10 @@ class FusionEvaluator:
                 # Spatially-averaged rPPG signal (last slot in the N-dim block)
                 signal = rppg_block[0, -1, :].cpu().numpy()   # (30,)
 
-                # Append the _STRIDE newest (non-overlapping) samples to the
-                # rolling accumulator so we build up a longer signal for FFT.
-                rppg_accum.extend(signal[-self._STRIDE:].tolist())
+                # Append the _STRIDE newest (non-overlapping) samples.
+                # Z-normalise each chunk first to eliminate inter-window DC drift.
+                chunk = self._znorm(signal[-self._STRIDE:])
+                rppg_accum.extend(chunk.tolist())
 
                 # ── Stage 2: Signal-based scores ──────────────────────────
                 r_score         = self._rppg_score(signal, fps)
